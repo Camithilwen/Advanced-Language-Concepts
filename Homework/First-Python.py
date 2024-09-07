@@ -8,3 +8,4 @@ test3 = random1.randint(5, 40)
 array1 = [test1, test2, test3]
 for x in array1:
     print(x)
+ 
