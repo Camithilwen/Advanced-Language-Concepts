@@ -2,6 +2,7 @@ import re
 from PIL import Image
 import numpy as np
 from PNGwrite import *
+import webp
 class WEBPconvert:
     '''Contains methods necessary to parse a WEBP file for important header data 
     and, decompress raw pixel data, and, currently, re-write to a PNG.'''
@@ -36,7 +37,7 @@ class WEBPconvert:
         fileHeader = self.headerParse()
         '''Opens the image file and parses for alpha information. Nonstandard color spaces are
         converted to RGBA.'''
-        with Image.open(self.path) as img:
+        with webp.load_image(self.path) as img:
             if img.mode != 'RGBA' and fileHeader.get("alpha", False):
                 img = img.convert('RGBA')
             elif img.mode == 'P':
