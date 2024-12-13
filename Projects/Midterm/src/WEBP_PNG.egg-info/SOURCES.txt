@@ -1,0 +1,11 @@
+LICENSE
+README.md
+pyproject.toml
+src/WEBP-PNG/PNGwrite.py
+src/WEBP-PNG/WEBPconvert.py
+src/WEBP-PNG/WebP-PNG.py
+src/WEBP-PNG/__init__.py
+src/WEBP_PNG.egg-info/PKG-INFO
+src/WEBP_PNG.egg-info/SOURCES.txt
+src/WEBP_PNG.egg-info/dependency_links.txt
+src/WEBP_PNG.egg-info/top_level.txt
