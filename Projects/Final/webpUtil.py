@@ -1,10 +1,12 @@
-# Import PyQt5 GUI libraries
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QFileDialog, QMessageBox, QVBoxLayout, QLineEdit, QPushButton, QLabel, QWidget
+    QApplication, QMainWindow, QFileDialog, QMessageBox, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QLabel, QWidget
 )
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QFont, QPixmap
+from PyQt5.QtGui import QGuiApplication
+from PyQt5.QtCore import Qt
 from WEBPconvert import *
 import sys
+import os
 
 # Interface
 interface = WEBPconvert()
@@ -15,41 +17,69 @@ class MainWindow(QMainWindow):
 
         # Main window configuration
         self.setWindowTitle("WEBP to PNG Converter")
-        self.setGeometry(100, 100, 300, 200)
+        self.setGeometry(100, 100, 800, 500)  # Taller window
+        self.setMinimumSize(800, 500)
+
+        # High-DPI scaling
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
         # Central widget and layout
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
-        self.layout = QVBoxLayout(central_widget)
+        self.mainLayout = QVBoxLayout(central_widget)
 
-        # Filepath display
-        self.filepath = ""
+        # Filepath display with "Open in Folder" button
+        self.filepathLayout = QHBoxLayout()
+        self.mainLayout.addLayout(self.filepathLayout)
+
         self.fileDisplay = QLineEdit(self)
-        self.fileDisplay.setPlaceholderText("File path will be displayed here")
+        self.fileDisplay.setPlaceholderText("File path")
         self.fileDisplay.setReadOnly(True)
-        self.layout.addWidget(self.fileDisplay)
+        self.fileDisplay.setFixedHeight(30)
+        self.filepathLayout.addWidget(self.fileDisplay)
 
-        # Images 
+        self.openFolderButton = QPushButton("Open in Folder", self)
+        self.openFolderButton.setFixedSize(150, 30)
+        self.openFolderButton.setEnabled(False)  # Initially disabled
+        self.openFolderButton.clicked.connect(self.openInFolderCommand)
+        self.filepathLayout.addWidget(self.openFolderButton)
+
+        # Images layout (side by side)
+        self.imageLayout = QHBoxLayout()
+        self.mainLayout.addLayout(self.imageLayout)
+
         self.beforeImageLabel = QLabel("Before Image", self)
-        self.beforeImageLabel.setFixedSize(300, 300)
-        self.layout.addWidget(self.beforeImageLabel)
+        self.beforeImageLabel.setFixedSize(350, 350)
+        self.beforeImageLabel.setStyleSheet("border: 1px solid black;")
+        self.beforeImageLabel.setAlignment(Qt.AlignCenter)
+        self.imageLayout.addWidget(self.beforeImageLabel)
 
         self.afterImageLabel = QLabel("After Image", self)
-        self.afterImageLabel.setFixedSize(300, 300)
-        self.layout.addWidget(self.afterImageLabel)
+        self.afterImageLabel.setFixedSize(350, 350)
+        self.afterImageLabel.setStyleSheet("border: 1px solid black;")
+        self.afterImageLabel.setAlignment(Qt.AlignCenter)
+        self.imageLayout.addWidget(self.afterImageLabel)
 
-        # Buttons
+        # Buttons layout (side by side)
+        self.buttonLayout = QHBoxLayout()
+        self.mainLayout.addLayout(self.buttonLayout)
+
         self.openButton = QPushButton("Open", self)
         self.openButton.clicked.connect(self.openCommand)
-        self.layout.addWidget(self.openButton)
+        self.buttonLayout.addWidget(self.openButton)
 
         self.convertButton = QPushButton("Convert", self)
         self.convertButton.clicked.connect(self.convertCommand)
-        self.layout.addWidget(self.convertButton)
+        self.buttonLayout.addWidget(self.convertButton)
 
         self.closeButton = QPushButton("Close", self)
         self.closeButton.clicked.connect(self.close)
-        self.layout.addWidget(self.closeButton)
+        self.buttonLayout.addWidget(self.closeButton)
+
+        # Ensure buttons are evenly sized
+        for button in [self.openButton, self.convertButton, self.closeButton]:
+            button.setFixedSize(150, 40)
 
     def openCommand(self):
         """Generates a file dialog and passes selection to the conversion module."""
@@ -60,28 +90,53 @@ class MainWindow(QMainWindow):
             self.fileDisplay.setText(file_path)  # Updates the filepath display
             status = interface.fileOpen(file_path)
             if status == "OK":
-                pass
                 self.displayImage(file_path, self.beforeImageLabel)
             else:
                 QMessageBox.information(self, "Error", status)
 
     def convertCommand(self):
         """Calls the conversion method and generates a save dialog on completion."""
-        interface.fileConvert()
         options = QFileDialog.Options()
-        save_path, _ = QFileDialog.getSaveFileName(self, "Save File", "", "PNG files (*.png);;All Files (*)", options=options)
+        save_path, _ = QFileDialog.getSaveFileName(self, "Save File", "", "All Files (*)", options=options)
         if save_path:
-            interface.fileSave(save_path)
+            interface.fileConvert(save_path)
             self.displayImage(save_path, self.afterImageLabel)
+            self.savedPath = save_path  # Store the saved file path
+            self.openFolderButton.setEnabled(True)  # Enable "Open in Folder" button
 
     def displayImage(self, path, labelWidget):
         """Loads and displays input and output images in their respective label widgets."""
         pixmap = QPixmap(path)
-        pixmap = pixmap.scaled(300, 300)  # Resizes the image to fit the label
+        pixmap = pixmap.scaled(labelWidget.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
         labelWidget.setPixmap(pixmap)
 
+    def openInFolderCommand(self):
+        """Opens the saved image location in the system file browser."""
+        if hasattr(self, 'savedPath') and os.path.exists(self.savedPath):
+            folder_path = os.path.dirname(self.savedPath)
+            os.startfile(folder_path)  # Opens the folder in Windows Explorer
+
+    def get_scaled_font_size(self, base_size):
+        """Returns a scaled font size based on the device pixel ratio."""
+        screen = QGuiApplication.primaryScreen()
+        dpi = screen.logicalDotsPerInch()  # Get the logical DPI of the screen
+        scale_factor = dpi / 96.0  # Assume standard DPI is 96
+        return int(base_size * scale_factor)  # Scale the base font size
+
+
 if __name__ == '__main__':
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
+
     app = QApplication(sys.argv)
+
+    # Set a global font with dynamic scaling
+    screen = QGuiApplication.primaryScreen()
+    dpi = screen.logicalDotsPerInch()
+    scale_factor = dpi / 96.0
+    font = QFont("Arial", int(12 * scale_factor))  # Adjust base font size dynamically
+    app.setFont(font)
+
     main_window = MainWindow()
     main_window.show()
     sys.exit(app.exec_())
